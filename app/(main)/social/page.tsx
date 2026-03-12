@@ -5,6 +5,7 @@ import { eq, and, ne, count, sql, inArray } from 'drizzle-orm'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Users, Layers, BookOpen, Hash } from 'lucide-react'
+import { UserSearch } from './UserSearch'
 
 export default async function SocialPage() {
   const session = await auth()
@@ -29,6 +30,7 @@ export default async function SocialPage() {
   }[] = []
 
   if (myThemeNames.length > 0) {
+    const themeNamesSQL = sql.join(myThemeNames.map(n => sql`${n}`), sql.raw(', '))
     const rows = await db.execute(sql`
       SELECT
         u.id             AS "userId",
@@ -42,7 +44,7 @@ export default async function SocialPage() {
       LEFT JOIN block_themes bt ON bt.theme_id = t.id
       LEFT JOIN blocks b ON b.id = bt.block_id AND b.user_id = u.id
       WHERE u.id != ${userId}
-        AND lower(t.name) = ANY(${myThemeNames})
+        AND lower(t.name) = ANY(ARRAY[${themeNamesSQL}])
       GROUP BY u.id, u.name, u.image, u.username
       ORDER BY COUNT(DISTINCT t.name) DESC, "publicCount" DESC
       LIMIT 20
@@ -108,14 +110,14 @@ export default async function SocialPage() {
                       <Image src={p.userImage} alt={p.userName} width={40} height={40} className="rounded-full shrink-0" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600 shrink-0">
-                        {p.userName[0].toUpperCase()}
+                        {p.userName?.[0]?.toUpperCase() ?? '?'}
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-slate-900 truncate">{p.userName}</p>
                       {p.userUsername && <p className="text-xs text-slate-400">@{p.userUsername}</p>}
                       <div className="flex flex-wrap gap-1 mt-1.5">
-                        {p.sharedThemes.slice(0, 3).map((t: string) => (
+                        {(p.sharedThemes ?? []).slice(0, 3).map((t: string) => (
                           <span key={t} className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full">
                             {t}
                           </span>
@@ -132,6 +134,9 @@ export default async function SocialPage() {
           )}
         </section>
       )}
+
+      {/* Busca de pessoas */}
+      <UserSearch />
 
       {/* Explorar por tema */}
       <section>

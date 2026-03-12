@@ -3,7 +3,10 @@ import { db } from '@/lib/db'
 import { users, blocks } from '@/lib/db/schema'
 import { eq, count, sum } from 'drizzle-orm'
 import { formatBytes } from '@/lib/utils'
-import { User, Database, LogOut, Shield } from 'lucide-react'
+import { Database, LogOut, Shield, User } from 'lucide-react'
+import { AvatarForm } from './AvatarForm'
+import { ProfileForm } from './ProfileForm'
+import { PasswordForm } from './PasswordForm'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -12,10 +15,7 @@ export default async function SettingsPage() {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
 
   const [stats] = await db
-    .select({
-      total: count(blocks.id),
-      storage: sum(blocks.fileSizeBytes),
-    })
+    .select({ total: count(blocks.id), storage: sum(blocks.fileSizeBytes) })
     .from(blocks)
     .where(eq(blocks.userId, userId))
 
@@ -36,19 +36,11 @@ export default async function SettingsPage() {
           <User className="h-4 w-4 text-slate-400" />
           <span className="text-sm font-semibold text-slate-700">Perfil</span>
         </div>
-        <div className="p-4 space-y-3">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center text-2xl font-bold text-indigo-600 shrink-0">
-              {user?.name?.[0]?.toUpperCase() ?? '?'}
-            </div>
-            <div>
-              <p className="font-semibold text-slate-900">{user?.name}</p>
-              <p className="text-sm text-slate-500">{user?.email}</p>
-              <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium capitalize">
-                {user?.plan ?? 'free'}
-              </span>
-            </div>
-          </div>
+        <div className="p-4 space-y-5">
+          <AvatarForm name={user?.name ?? ''} image={user?.image ?? null} />
+          <hr className="border-slate-100" />
+          <ProfileForm name={user?.name ?? ''} username={user?.username ?? null} />
+          <p className="text-xs text-slate-400">{user?.email}</p>
         </div>
       </section>
 
@@ -66,10 +58,7 @@ export default async function SettingsPage() {
           <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all"
-              style={{
-                width: `${storagePct}%`,
-                backgroundColor: storagePct > 80 ? '#ef4444' : '#6366f1',
-              }}
+              style={{ width: `${storagePct}%`, backgroundColor: storagePct > 80 ? '#ef4444' : '#6366f1' }}
             />
           </div>
           <p className="text-xs text-slate-400">{stats?.total ?? 0} blocos salvos</p>
@@ -83,9 +72,7 @@ export default async function SettingsPage() {
           <span className="text-sm font-semibold text-slate-700">Segurança</span>
         </div>
         <div className="p-4">
-          <p className="text-sm text-slate-500">
-            {user?.password ? 'Login com email e senha' : 'Login via OAuth'}
-          </p>
+          <PasswordForm hasPassword={!!user?.password} />
         </div>
       </section>
 
@@ -98,7 +85,7 @@ export default async function SettingsPage() {
           }}>
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors active:scale-[0.99]"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition-colors active:scale-[0.99] cursor-pointer"
             >
               <LogOut className="h-4 w-4" />
               Sair da conta

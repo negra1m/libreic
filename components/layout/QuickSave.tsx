@@ -107,7 +107,7 @@ export function QuickSave({ themes }: QuickSaveProps) {
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5 cursor-pointer">
           <Plus className="h-4 w-4" />
-          Salvar
+          Conhecimento
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
