@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id
 
   // 1. Tenta full-text search (PostgreSQL tsvector)
-  let relevant = await db.execute(sql`
+  let relevant = await db.execute(`
     SELECT b.id, b.title, b.body_text, b.personal_note, b.summary, b.main_insight, b.source_url,
       ts_rank(
         to_tsvector('portuguese', coalesce(b.title,'') || ' ' || coalesce(b.body_text,'') || ' ' || coalesce(b.personal_note,'') || ' ' || coalesce(b.summary,'')),
