@@ -4,13 +4,17 @@ import * as schema from './schema'
 
 const connectionString = process.env.DATABASE_URL!
 
+const isServerless = process.env.VERCEL === '1'
+
 const globalForDb = globalThis as unknown as { conn: postgres.Sql }
 const conn = globalForDb.conn ?? postgres(connectionString, {
-  max: 10,
-  ssl: 'require',         // Supabase exige SSL
-  prepare: false,         // Necessário para connection pooler do Supabase
+  max: isServerless ? 1 : 10,
+  ssl: 'require',
+  prepare: false,
+  idle_timeout: 20,
+  connect_timeout: 10,
 })
-if (process.env.NODE_ENV !== 'production') globalForDb.conn = conn
+if (!isServerless) globalForDb.conn = conn
 
 export const db = drizzle(conn, { schema })
 export type DB = typeof db
