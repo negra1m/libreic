@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { users, blocks } from '@/lib/db/schema'
 import { eq, count, sum } from 'drizzle-orm'
 import { formatBytes } from '@/lib/utils'
-import { User, Database, LogOut, Shield, Bell } from 'lucide-react'
+import { User, Database, LogOut, Shield } from 'lucide-react'
 
 export default async function SettingsPage() {
   const session = await auth()
