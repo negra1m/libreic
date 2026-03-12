@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LibreIC
 
-## Getting Started
+Biblioteca de conhecimento pessoal com feed social, temas colaborativos e suporte a PDFs/mídia.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Next.js 16** (App Router)
+- **PostgreSQL** via Supabase + Drizzle ORM
+- **NextAuth v5** (credentials + Google OAuth)
+- **Tailwind CSS v4**
+- Deploy: **Vercel**
+
+---
+
+## Variáveis de ambiente
+
+Crie um arquivo `.env.local` na raiz do projeto:
+
+```env
+# Banco de dados (Supabase — usar URL do pooler, não a direta)
+DATABASE_URL=postgresql://postgres.[ref]:[senha]@aws-0-[region].pooler.supabase.com:5432/postgres
+
+# Auth
+AUTH_SECRET=sua_chave_secreta_aqui
+
+# Google OAuth (opcional)
+AUTH_GOOGLE_ID=...
+AUTH_GOOGLE_SECRET=...
+
+# Supabase Storage — necessário para upload de arquivos (PDF, imagem, áudio)
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...  # Settings → API → service_role no Supabase
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Configurar upload de arquivos (Supabase Storage)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. No painel do Supabase, vá em **Storage**
+2. Crie um bucket chamado `blocks`
+3. Marque o bucket como **público** (Public bucket)
+4. Adicione `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` nas variáveis de ambiente do Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Banco de dados
 
-To learn more about Next.js, take a look at the following resources:
+### Criar tabelas (primeira vez)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+psql $DATABASE_URL -f lib/db/migrations/0000_init.sql
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Migrations incrementais
 
-## Deploy on Vercel
+```bash
+# Temas privados / grupos colaborativos
+psql $DATABASE_URL -f lib/db/migrations/0002_private_themes.sql
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Feed social / follows
+psql $DATABASE_URL -f lib/db/migrations/0003_follows.sql
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Ou cole o conteúdo de cada arquivo diretamente no **SQL Editor** do Supabase.
+
+---
+
+## Desenvolvimento local
+
+```bash
+npm install
+npm run dev
+```
+
+Acesse [http://localhost:3000](http://localhost:3000).
+
+---
+
+## Deploy
+
+O projeto é deployado automaticamente via **Vercel** a cada push na branch `main`.
+
+Certifique-se de configurar todas as variáveis de ambiente no painel do Vercel antes do primeiro deploy.
