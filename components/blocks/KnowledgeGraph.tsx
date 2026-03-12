@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap,
-  type Node, type Edge, useNodesState, useEdgesState,
+  ReactFlowProvider, useReactFlow,
+  type Node, type Edge,
   MarkerType, Panel
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -46,7 +47,7 @@ const nodeTypes = { block: BlockNode, theme: ThemeNode }
 
 function applyLayout(nodes: any[], edges: any[]) {
   const themeNodes = nodes.filter(n => n.type === 'theme')
-  const blockNodes  = nodes.filter(n => n.type === 'block')
+  const blockNodes = nodes.filter(n => n.type === 'block')
   const W = 900
   const themeRadius = 350
 
@@ -56,13 +57,13 @@ function applyLayout(nodes: any[], edges: any[]) {
       ...n,
       position: {
         x: W / 2 + themeRadius * Math.cos(angle),
-        y: 400   + themeRadius * Math.sin(angle),
+        y: 400 + themeRadius * Math.sin(angle),
       },
     }
   })
 
   const themeMap = new Map(positionedThemes.map(t => [t.id, t.position]))
-  const blockThemeEdges = edges.filter(e => e.type === 'theme')
+  const blockThemeEdges = edges.filter(e => e.data?.relationType === 'theme')
 
   const blockCountPerTheme = new Map<string, number>()
   for (const e of blockThemeEdges)
@@ -74,7 +75,7 @@ function applyLayout(nodes: any[], edges: any[]) {
     if (themeEdge) {
       const themePos = themeMap.get(themeEdge.target) ?? { x: W / 2, y: 400 }
       const count = blockCountPerTheme.get(themeEdge.target) ?? 1
-      const idx   = blockIdxPerTheme.get(themeEdge.target) ?? 0
+      const idx = blockIdxPerTheme.get(themeEdge.target) ?? 0
       blockIdxPerTheme.set(themeEdge.target, idx + 1)
       const angle = (2 * Math.PI * idx) / count
       const r = 150
@@ -86,92 +87,107 @@ function applyLayout(nodes: any[], edges: any[]) {
   return [...positionedThemes, ...positionedBlocks]
 }
 
-export function KnowledgeGraph() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
-  const [loading, setLoading]             = useState(true)
-  const [expandedThemes, setExpandedThemes] = useState<Set<string>>(new Set())
+function relationType(e: { data?: any }): string {
+  return (e.data as any)?.relationType ?? ''
+}
+
+function KnowledgeGraphInner() {
+  const { setNodes, setEdges, fitView } = useReactFlow()
+  const [loading, setLoading] = useState(true)
   const allNodesRef = useRef<Node[]>([])
   const allEdgesRef = useRef<Edge[]>([])
+  const expandedRef = useRef<Set<string>>(new Set())
   const router = useRouter()
 
   function applyVisibility(expanded: Set<string>) {
     const allNodes = allNodesRef.current
     const allEdges = allEdgesRef.current
 
-    // Blocos visíveis = pertencentes a pelo menos um tema expandido
     const visibleBlocks = new Set<string>()
     for (const e of allEdges)
-      if (e.type === 'theme' && expanded.has(e.target as string))
+      if (relationType(e) === 'theme' && expanded.has(e.target as string))
         visibleBlocks.add(e.source as string)
 
-    setNodes(allNodes.map(n => ({
-      ...n,
-      hidden: n.type === 'block' ? !visibleBlocks.has(n.id) : false,
-      data: n.type === 'theme' ? { ...n.data, expanded: expanded.has(n.id) } : n.data,
-    })))
+    const nextNodes: Node[] = [
+      ...allNodes
+        .filter(n => n.type === 'theme')
+        .map(n => ({ ...n, data: { ...n.data, expanded: expanded.has(n.id) } })),
+      ...allNodes.filter(n => n.type === 'block' && visibleBlocks.has(n.id)),
+    ]
 
-    setEdges(allEdges.map(e => {
-      if (e.type === 'theme')
-        return { ...e, hidden: !expanded.has(e.target as string) }
-      if (e.type === 'connection')
-        return { ...e, hidden: !visibleBlocks.has(e.source as string) || !visibleBlocks.has(e.target as string) }
-      return e
-    }))
+    const nextEdges: Edge[] = [
+      ...allEdges.filter(e => relationType(e) === 'theme-overlap'),
+      ...allEdges.filter(e => relationType(e) === 'theme' && expanded.has(e.target as string)),
+      ...allEdges.filter(e =>
+        (relationType(e) === 'connection' || relationType(e) === 'tag-connection') &&
+        visibleBlocks.has(e.source as string) &&
+        visibleBlocks.has(e.target as string)
+      ),
+    ]
+
+    setNodes(nextNodes)
+    setEdges(nextEdges)
   }
 
   useEffect(() => {
     fetch('/api/graph')
       .then(r => r.json())
       .then(data => {
-        // Conta blocos por tema
         const countMap = new Map<string, number>()
         for (const e of data.edges)
-          if (e.type === 'theme')
+          if (e.data?.relationType === 'theme')
             countMap.set(e.target, (countMap.get(e.target) ?? 0) + 1)
 
         const positioned = applyLayout(data.nodes, data.edges)
 
-        const rawNodes: Node[] = positioned.map(n => ({
+        const rawNodes: Node[] = positioned.map((n: any) => ({
           ...n,
           data: n.type === 'theme'
             ? { ...n.data, blockCount: countMap.get(n.id) ?? 0, expanded: false }
             : n.data,
         }))
 
-        const rawEdges: Edge[] = data.edges.map((e: any) => ({
-          ...e,
-          animated: e.type === 'connection',
-          style: e.type === 'theme'
-            ? { stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }
-            : { stroke: '#6366f1', strokeWidth: 2 },
-          markerEnd: e.type === 'connection'
-            ? { type: MarkerType.ArrowClosed, color: '#6366f1' }
-            : undefined,
-        }))
+        const rawEdges: Edge[] = data.edges.map((e: any) => {
+          const rt: string = e.data?.relationType ?? ''
+          return {
+            ...e,
+            animated: rt === 'connection',
+            style: rt === 'theme'
+              ? { stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }
+              : rt === 'theme-overlap'
+              ? { stroke: '#f59e0b', strokeWidth: 2.5, strokeDasharray: '6 3' }
+              : rt === 'tag-connection'
+              ? { stroke: '#10b981', strokeWidth: 2, strokeDasharray: '4 3' }
+              : { stroke: '#6366f1', strokeWidth: 2 },
+            markerEnd: rt === 'connection'
+              ? { type: MarkerType.ArrowClosed, color: '#6366f1' }
+              : undefined,
+            labelStyle: (rt === 'theme-overlap' || rt === 'tag-connection')
+              ? { fontSize: 9, fill: rt === 'theme-overlap' ? '#b45309' : '#065f46', fontWeight: 600 }
+              : undefined,
+            labelBgStyle: (rt === 'theme-overlap' || rt === 'tag-connection')
+              ? { fill: rt === 'theme-overlap' ? '#fef3c7' : '#d1fae5', fillOpacity: 0.9 }
+              : undefined,
+          }
+        })
 
         allNodesRef.current = rawNodes
         allEdgesRef.current = rawEdges
+
         applyVisibility(new Set())
         setLoading(false)
+        setTimeout(() => fitView({ padding: 0.15 }), 50)
       })
   }, [])
-
-  // Atualiza visibilidade sempre que expandedThemes muda
-  useEffect(() => {
-    if (allNodesRef.current.length === 0) return
-    applyVisibility(expandedThemes)
-  }, [expandedThemes])
 
   const onNodeClick = useCallback((_: any, node: Node) => {
     if (node.type === 'block') {
       router.push(`/block/${node.id}`)
     } else if (node.type === 'theme') {
-      setExpandedThemes(prev => {
-        const next = new Set(prev)
-        next.has(node.id) ? next.delete(node.id) : next.add(node.id)
-        return next
-      })
+      const next = new Set(expandedRef.current)
+      next.has(node.id) ? next.delete(node.id) : next.add(node.id)
+      expandedRef.current = next
+      applyVisibility(next)
     }
   }, [router])
 
@@ -186,12 +202,8 @@ export function KnowledgeGraph() {
 
   return (
     <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onNodeClick={onNodeClick}
       nodeTypes={nodeTypes}
+      onNodeClick={onNodeClick}
       fitView
       className="bg-slate-50"
     >
@@ -220,8 +232,24 @@ export function KnowledgeGraph() {
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <div className="w-6 h-0.5 bg-indigo-500" /> Conexão explícita
           </div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <div className="w-6" style={{ borderTop: '2.5px dashed #f59e0b', height: 0 }} /> Temas com tags comuns
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <div className="w-6" style={{ borderTop: '2px dashed #10b981', height: 0 }} /> Blocos com tags comuns
+          </div>
         </div>
       </Panel>
     </ReactFlow>
+  )
+}
+
+export function KnowledgeGraph() {
+  return (
+    <div className="w-full h-full">
+      <ReactFlowProvider>
+        <KnowledgeGraphInner />
+      </ReactFlowProvider>
+    </div>
   )
 }

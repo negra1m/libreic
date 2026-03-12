@@ -54,6 +54,16 @@ export async function GET(req: NextRequest) {
           coalesce(b.summary,'')
         ) @@ plainto_tsquery('portuguese', ${q})
         OR b.title ILIKE ${'%' + (q ?? '') + '%'}
+        OR EXISTS (
+          SELECT 1 FROM block_tags btg2
+          JOIN tags tg2 ON tg2.id = btg2.tag_id
+          WHERE btg2.block_id = b.id AND tg2.name ILIKE ${'%' + (q ?? '') + '%'}
+        )
+        OR EXISTS (
+          SELECT 1 FROM block_themes bt2
+          JOIN themes t2 ON t2.id = bt2.theme_id
+          WHERE bt2.block_id = b.id AND t2.name ILIKE ${'%' + (q ?? '') + '%'}
+        )
       )` : sql`true`})
       AND (${theme ? sql`bt.theme_id = ${theme}` : sql`true`})
       AND (${type   ? sql`b.source_type = ${type}::source_type` : sql`true`})

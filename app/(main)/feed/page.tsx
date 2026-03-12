@@ -20,6 +20,10 @@ export default async function FeedPage() {
   const followingIds = following.map(f => f.followingId)
 
   // Blocos publicos de quem eu sigo (ou de todos se nao sigo ninguem)
+  const followingFilter = followingIds.length > 0
+    ? sql`AND b.user_id = ANY(ARRAY[${sql.join(followingIds.map(id => sql`${id}`), sql.raw(', '))}]::uuid[])`
+    : sql``
+
   const feedBlocks = await db.execute(sql`
     SELECT
       b.id, b.title, b.source_url, b.source_type, b.summary,
@@ -35,7 +39,7 @@ export default async function FeedPage() {
     LEFT JOIN tags tg ON tg.id = btg.tag_id
     WHERE b.is_public = true
       AND b.user_id != ${userId}
-      ${followingIds.length > 0 ? sql`AND b.user_id = ANY(${followingIds}::uuid[])` : sql``}
+      ${followingFilter}
     GROUP BY b.id, b.title, b.source_url, b.source_type, b.summary,
              b.thumbnail_url, b.created_at,
              u.id, u.name, u.image, u.username
