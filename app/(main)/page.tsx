@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { blocks, blockThemes, themes, blockTags, tags } from '@/lib/db/schema'
-import { eq, desc, and, lte, count, sql } from 'drizzle-orm'
+import { eq, desc, and, lte, count, sql, isNull } from 'drizzle-orm'
 import { BlockCard } from '@/components/blocks/BlockCard'
 import { Clock, Star, RotateCcw, BookOpen, Layers } from 'lucide-react'
 import Link from 'next/link'
@@ -10,7 +10,7 @@ export default async function HomePage() {
   const session = await auth()
   const userId = session!.user!.id!
 
-  const [recent, dueReview, themeStats] = await Promise.all([
+  const [recent, dueReview, themeStats, totalThemes] = await Promise.all([
     // Recentes
     db.query.blocks.findMany({
       where: and(eq(blocks.userId, userId), eq(blocks.status, 'saved')),
@@ -46,6 +46,8 @@ export default async function HomePage() {
       .groupBy(blockThemes.themeId, themes.name, themes.color)
       .orderBy(sql`count(${blockThemes.blockId}) desc`)
       .limit(6),
+    // Total de temas (incluindo vazios)
+    db.select({ value: count() }).from(themes).where(eq(themes.userId, userId)),
   ])
 
   return (
@@ -60,7 +62,7 @@ export default async function HomePage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Para revisar', value: dueReview.length, icon: RotateCcw, href: '/library?status=pending', color: 'text-amber-600' },
-          { label: 'Temas', value: themeStats.length, icon: Layers, href: '/explore', color: 'text-indigo-600' },
+          { label: 'Temas', value: totalThemes[0]?.value ?? 0, icon: Layers, href: '/explore', color: 'text-indigo-600' },
         ].map(s => (
           <Link key={s.label} href={s.href}>
             <div className="bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 transition-colors">

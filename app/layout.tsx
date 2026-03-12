@@ -20,6 +20,8 @@ export const viewport: Viewport = {
   themeColor: '#6366f1',
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,   // evita zoom automático ao focar inputs no iOS
+  userScalable: false,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
