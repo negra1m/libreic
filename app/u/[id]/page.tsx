@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { blocks, blockTags, tags, users, themes, blockThemes } from '@/lib/db/schema'
+import { blocks, blockTags, tags, users, themes, follows } from '@/lib/db/schema'
 import { eq, and, count } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import Link from 'next/link'
@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { Hash, Layers, BookOpen } from 'lucide-react'
 import { getSourceIcon, formatRelativeDate } from '@/lib/utils'
 import { notFound } from 'next/navigation'
+import { FollowButton } from './FollowButton'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -16,6 +17,15 @@ export default async function PublicProfilePage({ params }: Props) {
 
   const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1)
   if (!user) notFound()
+
+  // Verifica se o usuário logado já segue este perfil
+  let isFollowing = false
+  if (session?.user?.id && session.user.id !== id) {
+    const [existing] = await db.select().from(follows)
+      .where(and(eq(follows.followerId, session.user.id), eq(follows.followingId, id)))
+      .limit(1)
+    isFollowing = !!existing
+  }
 
   const [publicBlocks, topTags, themeCount] = await Promise.all([
     db.query.blocks.findMany({
@@ -63,10 +73,8 @@ export default async function PublicProfilePage({ params }: Props) {
                 </span>
               </div>
             </div>
-            {session && (
-              <Link href="/" className="ml-auto text-sm text-indigo-600 hover:underline shrink-0">
-                ← Início
-              </Link>
+            {session?.user?.id && session.user.id !== id && (
+              <FollowButton userId={id} initialFollowing={isFollowing} />
             )}
           </div>
         </div>

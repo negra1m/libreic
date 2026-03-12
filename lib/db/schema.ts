@@ -64,18 +64,41 @@ export const verificationTokens = pgTable('verification_tokens', {
 
 // ─── Themes ───────────────────────────────────────────────────────────────────
 export const themes = pgTable('themes', {
-  id:        uuid('id').primaryKey().defaultRandom(),
-  userId:    uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  parentId:  uuid('parent_id'),
-  name:      text('name').notNull(),
-  icon:      text('icon'),
-  color:     text('color').default('#6366f1'),
-  position:  integer('position').notNull().default(0),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  id:         uuid('id').primaryKey().defaultRandom(),
+  userId:     uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  parentId:   uuid('parent_id'),
+  name:       text('name').notNull(),
+  icon:       text('icon'),
+  color:      text('color').default('#6366f1'),
+  position:   integer('position').notNull().default(0),
+  visibility: text('visibility').notNull().default('public'), // 'public' | 'private'
+  createdAt:  timestamp('created_at').notNull().defaultNow(),
+  updatedAt:  timestamp('updated_at').notNull().defaultNow(),
 }, (t) => ({
   userIdx: index('idx_themes_user').on(t.userId, t.parentId),
 }))
+
+// ─── Theme Members (private groups) ──────────────────────────────────────────
+export const themeMembers = pgTable('theme_members', {
+  themeId:   uuid('theme_id').notNull().references(() => themes.id, { onDelete: 'cascade' }),
+  userId:    uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role:      text('role').notNull().default('member'), // 'owner' | 'member'
+  invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'set null' }),
+  joinedAt:  timestamp('joined_at').notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.themeId, t.userId] }),
+}))
+
+export const themeInvites = pgTable('theme_invites', {
+  id:         uuid('id').primaryKey().defaultRandom(),
+  themeId:    uuid('theme_id').notNull().references(() => themes.id, { onDelete: 'cascade' }),
+  invitedBy:  uuid('invited_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token:      text('token').notNull().unique(),
+  role:       text('role').notNull().default('member'),
+  expiresAt:  timestamp('expires_at').notNull(),
+  acceptedAt: timestamp('accepted_at'),
+  createdAt:  timestamp('created_at').notNull().defaultNow(),
+})
 
 // ─── Blocks ───────────────────────────────────────────────────────────────────
 export const blocks = pgTable('blocks', {
@@ -148,6 +171,17 @@ export const blockConnections = pgTable('block_connections', {
   targetIdx: index('idx_connections_target').on(t.targetId),
 }))
 
+// ─── Follows ──────────────────────────────────────────────────────────────────
+export const follows = pgTable('follows', {
+  followerId:  uuid('follower_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  followingId: uuid('following_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt:   timestamp('created_at').notNull().defaultNow(),
+}, (t) => ({
+  pk:       primaryKey({ columns: [t.followerId, t.followingId] }),
+  follIdx:  index('idx_follows_follower').on(t.followerId),
+  followIdx: index('idx_follows_following').on(t.followingId),
+}))
+
 // ─── Collections ──────────────────────────────────────────────────────────────
 export const collections = pgTable('collections', {
   id:          uuid('id').primaryKey().defaultRandom(),
@@ -191,19 +225,39 @@ export const collectionInvites = pgTable('collection_invites', {
 })
 
 // ─── Relations ────────────────────────────────────────────────────────────────
+export const followsRelations = relations(follows, ({ one }) => ({
+  follower:  one(users, { fields: [follows.followerId],  references: [users.id], relationName: 'followers' }),
+  following: one(users, { fields: [follows.followingId], references: [users.id], relationName: 'following' }),
+}))
+
 export const usersRelations = relations(users, ({ many }) => ({
   themes:            many(themes),
   blocks:            many(blocks),
   tags:              many(tags),
   collections:       many(collections),
   collectionMembers: many(collectionMembers),
+  themeMembers:      many(themeMembers),
+  followers:         many(follows, { relationName: 'following' }),
+  following:         many(follows, { relationName: 'followers' }),
 }))
 
 export const themesRelations = relations(themes, ({ one, many }) => ({
-  user:        one(users, { fields: [themes.userId], references: [users.id] }),
-  parent:      one(themes, { fields: [themes.parentId], references: [themes.id], relationName: 'parent' }),
-  children:    many(themes, { relationName: 'parent' }),
-  blockThemes: many(blockThemes),
+  user:         one(users, { fields: [themes.userId], references: [users.id] }),
+  parent:       one(themes, { fields: [themes.parentId], references: [themes.id], relationName: 'parent' }),
+  children:     many(themes, { relationName: 'parent' }),
+  blockThemes:  many(blockThemes),
+  themeMembers: many(themeMembers),
+  themeInvites: many(themeInvites),
+}))
+
+export const themeMembersRelations = relations(themeMembers, ({ one }) => ({
+  theme: one(themes, { fields: [themeMembers.themeId], references: [themes.id] }),
+  user:  one(users,  { fields: [themeMembers.userId],  references: [users.id] }),
+}))
+
+export const themeInvitesRelations = relations(themeInvites, ({ one }) => ({
+  theme: one(themes, { fields: [themeInvites.themeId],   references: [themes.id] }),
+  user:  one(users,  { fields: [themeInvites.invitedBy], references: [users.id] }),
 }))
 
 export const blocksRelations = relations(blocks, ({ one, many }) => ({

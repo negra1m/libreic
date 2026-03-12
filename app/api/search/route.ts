@@ -64,5 +64,27 @@ export async function GET(req: NextRequest) {
     LIMIT ${limit} OFFSET ${offset}
   `)
 
-  return NextResponse.json({ results: result, page, limit })
+  // Search users by name/username (only when a query is provided)
+  let users: any[] = []
+  if (q) {
+    const userRows = await db.execute(sql`
+      SELECT
+        u.id, u.name, u.username, u.image,
+        COUNT(DISTINCT b.id) AS "publicCount"
+      FROM users u
+      LEFT JOIN blocks b ON b.user_id = u.id AND b.is_public = true
+      WHERE u.id != ${userId}
+        AND (
+          u.name ILIKE ${'%' + q + '%'}
+          OR u.username ILIKE ${'%' + q + '%'}
+          OR u.email ILIKE ${'%' + q + '%'}
+        )
+      GROUP BY u.id, u.name, u.username, u.image
+      ORDER BY u.name
+      LIMIT 5
+    `)
+    users = userRows as any[]
+  }
+
+  return NextResponse.json({ results: result, users, page, limit })
 }

@@ -1,16 +1,19 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { Search, Loader2, Sparkles, BookOpen } from 'lucide-react'
+import { Search, Loader2, Sparkles, Users } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { BlockCard } from '@/components/blocks/BlockCard'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import Image from 'next/image'
+import Link from 'next/link'
 
 export default function SearchPage() {
   const sp = useSearchParams()
   const [q, setQ] = useState(sp.get('q') ?? '')
   const [results, setResults] = useState<any[]>([])
+  const [userResults, setUserResults] = useState<any[]>([])
   const [aiQuestion, setAiQuestion] = useState('')
   const [aiAnswer, setAiAnswer] = useState<{ answer: string; sources: any[] } | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -24,11 +27,13 @@ export default function SearchPage() {
           const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
           const data = await res.json()
           setResults(data.results ?? [])
+          setUserResults(data.users ?? [])
         })
       }, 300)
       return () => clearTimeout(timeout)
     } else {
       setResults([])
+      setUserResults([])
     }
   }, [q])
 
@@ -80,16 +85,44 @@ export default function SearchPage() {
             {isPending && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />}
           </div>
 
+          {userResults.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" /> Pessoas
+              </p>
+              <div className="flex flex-col gap-2">
+                {userResults.map((u: any) => (
+                  <Link key={u.id} href={`/u/${u.id}`}>
+                    <div className="bg-white border border-slate-200 rounded-xl p-3 hover:border-indigo-200 transition-colors flex items-center gap-3 cursor-pointer">
+                      {u.image ? (
+                        <Image src={u.image} alt={u.name} width={36} height={36} className="rounded-full shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600 shrink-0">
+                          {u.name?.[0]?.toUpperCase() ?? '?'}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-900 truncate">{u.name}</p>
+                        {u.username && <p className="text-xs text-slate-400">@{u.username}</p>}
+                      </div>
+                      <span className="ml-auto text-xs text-slate-400 shrink-0">{u.publicCount} público{u.publicCount !== 1 ? 's' : ''}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {results.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-sm text-slate-500">{results.length} resultado{results.length > 1 ? 's' : ''}</p>
+              <p className="text-xs font-semibold text-slate-500">Blocos ({results.length})</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {results.map((b: any) => (
                   <BlockCard key={b.id} block={b} />
                 ))}
               </div>
             </div>
-          ) : q.length >= 2 && !isPending ? (
+          ) : q.length >= 2 && !isPending && userResults.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
               <Search className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>Nenhum resultado para <strong>&ldquo;{q}&rdquo;</strong></p>

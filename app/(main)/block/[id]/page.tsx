@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { blocks } from '@/lib/db/schema'
+import { blocks, themes } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { notFound } from 'next/navigation'
 import { BlockDetail } from '@/components/blocks/BlockDetail'
@@ -21,9 +21,8 @@ export default async function BlockPage({ params }: { params: Promise<{ id: stri
 
   if (!block) notFound()
 
-  // Temas disponíveis para edição
   const allThemes = await db.query.themes.findMany({
-    where: eq(blocks.userId, session!.user!.id!),
+    where: eq(themes.userId, session!.user!.id!),
     orderBy: (t, { asc }) => [asc(t.name)],
   })
 

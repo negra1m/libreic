@@ -6,11 +6,12 @@ import { and, eq, count } from 'drizzle-orm'
 import { z } from 'zod'
 
 const updateSchema = z.object({
-  name:     z.string().min(1).max(60).optional(),
-  parentId: z.string().uuid().nullable().optional(),
-  icon:     z.string().optional(),
-  color:    z.string().optional(),
-  position: z.number().int().optional(),
+  name:       z.string().min(1).max(60).optional(),
+  parentId:   z.string().uuid().nullable().optional(),
+  icon:       z.string().optional(),
+  color:      z.string().optional(),
+  position:   z.number().int().optional(),
+  visibility: z.enum(['public', 'private']).optional(),
 })
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

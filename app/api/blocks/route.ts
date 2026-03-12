@@ -7,13 +7,16 @@ import { extractMetadata } from '@/lib/metadata'
 import { z } from 'zod'
 
 const createSchema = z.object({
-  title:      z.string().optional(),
-  sourceUrl:  z.string().url().optional(),
-  sourceType: z.enum(['link','youtube','reel','pdf','audio','image','note','internal']).optional(),
-  themeIds:   z.string().array().optional().default([]),
-  tags:       z.string().array().optional().default([]),
-  personalNote: z.string().optional(),
-  importance: z.number().int().min(1).max(5).optional(),
+  title:         z.string().optional(),
+  sourceUrl:     z.string().url().optional(),
+  sourceType:    z.enum(['link','youtube','reel','pdf','audio','image','note','internal']).optional(),
+  themeIds:      z.string().array().optional().default([]),
+  tags:          z.string().array().optional().default([]),
+  personalNote:  z.string().optional(),
+  importance:    z.number().int().min(1).max(5).optional(),
+  filePath:      z.string().optional(),
+  fileName:      z.string().optional(),
+  fileSizeBytes: z.number().int().optional(),
 })
 
 export async function GET(req: NextRequest) {
@@ -63,7 +66,7 @@ export async function POST(req: NextRequest) {
   const parsed = createSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  let { title, sourceUrl, sourceType, themeIds, tags: tagList, personalNote, importance } = parsed.data
+  let { title, sourceUrl, sourceType, themeIds, tags: tagList, personalNote, importance, filePath, fileName, fileSizeBytes } = parsed.data
 
   // Extrai metadados se tiver URL
   let thumbnailUrl: string | null = null
@@ -93,6 +96,9 @@ export async function POST(req: NextRequest) {
     duration,
     personalNote,
     importance:   importance ?? 3,
+    filePath,
+    fileName,
+    fileSizeBytes,
   }).returning()
 
   // Associa temas

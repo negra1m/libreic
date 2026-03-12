@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { TagInput } from '@/components/ui/TagInput'
 import {
   cn, formatRelativeDate, getStatusColor, getStatusLabel,
   getSourceIcon, nextReviewDate
@@ -58,7 +59,7 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
   const [summary, setSummary] = useState(block.summary ?? '')
   const [mainInsight, setMainInsight] = useState(block.mainInsight ?? '')
   const [actionItem, setActionItem] = useState(block.actionItem ?? '')
-  const [tags, setTags] = useState(block.blockTags.map(bt => bt.tag.name).join(', '))
+  const [tags, setTags] = useState<string[]>(block.blockTags.map(bt => bt.tag.name))
   const [isPending, startTransition] = useTransition()
   const [isAiPending, startAiTransition] = useTransition()
   const router = useRouter()
@@ -73,7 +74,7 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
           summary,
           mainInsight,
           actionItem,
-          tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+          tags,
         }),
       })
       if (res.ok) {
@@ -259,7 +260,7 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Tags</label>
-              <Input placeholder="tag1, tag2, tag3" value={tags} onChange={e => setTags(e.target.value)} />
+              <TagInput value={tags} onChange={setTags} />
             </div>
           </div>
         ) : (

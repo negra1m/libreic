@@ -6,7 +6,6 @@ import { eq } from 'drizzle-orm'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { QuickSave } from '@/components/layout/QuickSave'
-import { Search } from 'lucide-react'
 import Link from 'next/link'
 
 async function getThemeTree(userId: string) {
@@ -48,13 +47,6 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           {/* Logo mobile */}
           <Link href="/" className="md:hidden font-bold text-indigo-600 text-lg tracking-tight">
             LibreIC
-          </Link>
-
-          <Link href="/search" className="flex-1 max-w-sm">
-            <div className="flex items-center gap-2 h-9 px-3 rounded-xl border border-slate-200 text-sm text-slate-400 bg-slate-50 cursor-pointer hover:border-indigo-300 transition-colors">
-              <Search className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">Buscar...</span>
-            </div>
           </Link>
 
           <QuickSave themes={themeTree as any} />

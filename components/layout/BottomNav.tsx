@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Library, Compass, Search, Users } from 'lucide-react'
+import { Home, Library, Compass, Rss, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const items = [
-  { href: '/',            label: 'Home',      icon: Home },
-  { href: '/library',     label: 'Biblioteca', icon: Library },
-  { href: '/explore',     label: 'Explorar',   icon: Compass },
-  { href: '/search',      label: 'Busca',      icon: Search },
-  { href: '/social',      label: 'Social',     icon: Users },
+  { href: '/',         label: 'Home',      icon: Home },
+  { href: '/library',  label: 'Biblioteca', icon: Library },
+  { href: '/explore',  label: 'Explorar',   icon: Compass },
+  { href: '/feed',     label: 'Feed',       icon: Rss },
+  { href: '/social',   label: 'Social',     icon: Users },
 ]
 
 export function BottomNav() {

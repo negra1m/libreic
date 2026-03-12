@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Home, Library, Search, Folder, Download, Settings, ChevronRight, Plus, GitFork, Users } from 'lucide-react'
+import { BookOpen, Home, Library, Search, Folder, Download, Settings, ChevronRight, Plus, GitFork, Users, Rss } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
@@ -19,14 +19,15 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { href: '/',           label: 'Home',      icon: Home },
-  { href: '/library',   label: 'Biblioteca', icon: Library },
-  { href: '/explore',   label: 'Explorar',   icon: Folder },
-  { href: '/search',    label: 'Busca',      icon: Search },
-  { href: '/collections', label: 'Coleções', icon: BookOpen },
-  { href: '/downloads', label: 'Downloads',  icon: Download },
-  { href: '/social',    label: 'Social',      icon: Users },
-  { href: '/graph',     label: 'Grafo',       icon: GitFork },
+  { href: '/',           label: 'Home',       icon: Home },
+  { href: '/library',    label: 'Biblioteca', icon: Library },
+  { href: '/explore',    label: 'Explorar',   icon: Folder },
+  { href: '/search',     label: 'Busca',      icon: Search },
+  { href: '/feed',       label: 'Feed',       icon: Rss },
+  { href: '/social',     label: 'Social',     icon: Users },
+  { href: '/collections', label: 'Coleções',  icon: BookOpen },
+  { href: '/downloads',  label: 'Downloads',  icon: Download },
+  { href: '/graph',      label: 'Grafo',      icon: GitFork },
 ]
 
 function ThemeItem({ theme, depth = 0 }: { theme: Theme; depth?: number }) {
