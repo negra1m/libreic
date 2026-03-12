@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { BookOpen, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,8 +13,6 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
-
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -32,7 +29,12 @@ export default function RegisterPage() {
         return
       }
 
-      await signIn('credentials', { email, password, callbackUrl: '/' })
+      const result = await signIn('credentials', { email, password, redirect: false })
+      if (result?.error) {
+        setError('Erro ao fazer login automático. Tente entrar manualmente.')
+        return
+      }
+      window.location.href = '/'
     })
   }
 
