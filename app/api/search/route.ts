@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const userId = session.user.id
 
   const result = await db.execute(sql`
-    SELECT DISTINCT
+    SELECT
       b.id, b.title, b.source_url, b.source_type, b.thumbnail_url,
       b.status, b.importance, b.personal_note, b.created_at, b.updated_at,
       COALESCE(
