@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { themes, themeMembers } from '@/lib/db/schema'
-import { eq, or, inArray } from 'drizzle-orm'
-import { sql } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 const createSchema = z.object({
@@ -20,13 +19,11 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = session.user.id
 
-  // Themes I own
   const owned = await db.query.themes.findMany({
     where: eq(themes.userId, userId),
     orderBy: (t, { asc }) => [asc(t.position), asc(t.name)],
   })
 
-  // Private themes I'm a member of (but don't own)
   const memberships = await db.select({ themeId: themeMembers.themeId })
     .from(themeMembers)
     .where(eq(themeMembers.userId, userId))

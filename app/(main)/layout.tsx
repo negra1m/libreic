@@ -1,28 +1,31 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { themes } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { QuickSave } from '@/components/layout/QuickSave'
 import Link from 'next/link'
 
 async function getThemeTree(userId: string) {
-  const allThemes = await db.query.themes.findMany({
-    where: eq(themes.userId, userId),
-    orderBy: (t, { asc }) => [asc(t.position), asc(t.name)],
-  })
+  // Raw SQL to avoid issues if new columns (visibility) not yet migrated
+  const allThemes = await db.execute(sql`
+    SELECT id, user_id AS "userId", parent_id AS "parentId",
+           name, icon, color, position
+    FROM themes
+    WHERE user_id = ${userId}
+    ORDER BY position, name
+  `) as any[]
 
-  const map = new Map(allThemes.map(t => ({ ...t, children: [] as typeof allThemes })).map(t => [t.id, t]))
-  const roots: typeof allThemes = []
+  const map = new Map(allThemes.map((t: any) => [t.id, { ...t, children: [] as any[] }]))
+  const roots: any[] = []
 
   for (const t of map.values()) {
     if (t.parentId) {
       const parent = map.get(t.parentId)
-      if (parent) (parent as any).children.push(t)
+      if (parent) parent.children.push(t)
     } else {
-      roots.push(t as any)
+      roots.push(t)
     }
   }
   return roots
