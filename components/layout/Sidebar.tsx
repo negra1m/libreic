@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Home, Library, Search, Folder, Download, Settings, ChevronRight, Plus } from 'lucide-react'
+import { BookOpen, Home, Library, Search, Folder, Download, Settings, ChevronRight, Plus, GitFork } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
@@ -25,6 +25,7 @@ const navItems = [
   { href: '/search',    label: 'Busca',      icon: Search },
   { href: '/collections', label: 'Coleções', icon: BookOpen },
   { href: '/downloads', label: 'Downloads',  icon: Download },
+  { href: '/graph',     label: 'Grafo',       icon: GitFork },
 ]
 
 function ThemeItem({ theme, depth = 0 }: { theme: Theme; depth?: number }) {
@@ -92,7 +93,7 @@ export function Sidebar({ themes }: SidebarProps) {
             key={href}
             href={href}
             className={cn(
-              'flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors',
+              'flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors cursor-pointer',
               'hover:bg-slate-100 text-slate-700',
               pathname === href && 'bg-indigo-50 text-indigo-700 font-medium'
             )}

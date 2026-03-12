@@ -24,6 +24,7 @@ export const users = pgTable('users', {
   image:             text('image'),
   emailVerified:     timestamp('email_verified', { mode: 'date' }), // requerido pelo NextAuth
   password:          text('password'), // null se OAuth
+  username:          text('username').unique(),
   plan:              planEnum('plan').notNull().default('free'),
   storageLimitBytes: bigint('storage_limit_bytes', { mode: 'number' }).notNull().default(524288000),
   createdAt:         timestamp('created_at').notNull().defaultNow(),
@@ -166,12 +167,36 @@ export const collectionBlocks = pgTable('collection_blocks', {
   pk: primaryKey({ columns: [t.collectionId, t.blockId] }),
 }))
 
+
+export const collectionMembers = pgTable('collection_members', {
+  collectionId: uuid('collection_id').notNull().references(() => collections.id, { onDelete: 'cascade' }),
+  userId:       uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role:         text('role').notNull().default('viewer'),
+  invitedBy:    uuid('invited_by').references(() => users.id, { onDelete: 'set null' }),
+  joinedAt:     timestamp('joined_at').notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.collectionId, t.userId] }),
+}))
+
+export const collectionInvites = pgTable('collection_invites', {
+  id:           uuid('id').primaryKey().defaultRandom(),
+  collectionId: uuid('collection_id').notNull().references(() => collections.id, { onDelete: 'cascade' }),
+  invitedBy:    uuid('invited_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  email:        text('email'),
+  token:        text('token').notNull().unique(),
+  role:         text('role').notNull().default('editor'),
+  expiresAt:    timestamp('expires_at').notNull(),
+  acceptedAt:   timestamp('accepted_at'),
+  createdAt:    timestamp('created_at').notNull().defaultNow(),
+})
+
 // ─── Relations ────────────────────────────────────────────────────────────────
 export const usersRelations = relations(users, ({ many }) => ({
-  themes:      many(themes),
-  blocks:      many(blocks),
-  tags:        many(tags),
-  collections: many(collections),
+  themes:            many(themes),
+  blocks:            many(blocks),
+  tags:              many(tags),
+  collections:       many(collections),
+  collectionMembers: many(collectionMembers),
 }))
 
 export const themesRelations = relations(themes, ({ one, many }) => ({
@@ -206,8 +231,20 @@ export const blockConnectionsRelations = relations(blockConnections, ({ one }) =
 }))
 
 export const collectionsRelations = relations(collections, ({ one, many }) => ({
-  user:            one(users, { fields: [collections.userId], references: [users.id] }),
+  user:             one(users, { fields: [collections.userId], references: [users.id] }),
   collectionBlocks: many(collectionBlocks),
+  members:          many(collectionMembers),
+  invites:          many(collectionInvites),
+}))
+
+export const collectionMembersRelations = relations(collectionMembers, ({ one }) => ({
+  collection: one(collections, { fields: [collectionMembers.collectionId], references: [collections.id] }),
+  user:       one(users, { fields: [collectionMembers.userId], references: [users.id] }),
+}))
+
+export const collectionInvitesRelations = relations(collectionInvites, ({ one }) => ({
+  collection: one(collections, { fields: [collectionInvites.collectionId], references: [collections.id] }),
+  invitedBy:  one(users, { fields: [collectionInvites.invitedBy], references: [users.id] }),
 }))
 
 export const collectionBlocksRelations = relations(collectionBlocks, ({ one }) => ({

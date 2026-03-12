@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Library, Compass, Search, BookOpen } from 'lucide-react'
+import { Home, Library, Compass, Search, BookOpen, GitFork } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const items = [
@@ -10,7 +10,7 @@ const items = [
   { href: '/library',     label: 'Biblioteca', icon: Library },
   { href: '/explore',     label: 'Explorar',   icon: Compass },
   { href: '/search',      label: 'Busca',      icon: Search },
-  { href: '/collections', label: 'Coleções',   icon: BookOpen },
+  { href: '/graph',       label: 'Grafo',      icon: GitFork },
 ]
 
 export function BottomNav() {

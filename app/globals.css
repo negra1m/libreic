@@ -37,3 +37,10 @@ body {
 
 /* ReactFlow overrides */
 .react-flow__node { cursor: pointer; }
+
+
+/* Cursor pointer em todos os elementos interativos */
+button, a, [role="button"], [role="link"],
+select, label[for], summary {
+  cursor: pointer;
+}
