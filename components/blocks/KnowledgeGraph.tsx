@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap,
   type Node, type Edge, useNodesState, useEdgesState,
@@ -10,15 +10,6 @@ import '@xyflow/react/dist/style.css'
 import { useRouter } from 'next/navigation'
 import { Loader2, GitBranch } from 'lucide-react'
 import { getSourceIcon, getStatusColor } from '@/lib/utils'
-
-const SOURCE_COLORS: Record<string, string> = {
-  saved:      '#94a3b8',
-  pending:    '#f59e0b',
-  seen:       '#3b82f6',
-  summarized: '#8b5cf6',
-  applied:    '#22c55e',
-  archived:   '#e2e8f0',
-}
 
 function BlockNode({ data }: { data: any }) {
   return (
@@ -40,63 +31,55 @@ function BlockNode({ data }: { data: any }) {
 function ThemeNode({ data }: { data: any }) {
   return (
     <div
-      className="px-4 py-3 rounded-2xl border-2 text-center font-semibold text-white shadow-lg"
+      className="px-4 py-3 rounded-2xl border-2 text-center font-semibold text-white shadow-lg cursor-pointer select-none hover:opacity-90 transition-opacity"
       style={{ backgroundColor: data.color, borderColor: data.color }}
     >
       <p className="text-sm">{data.label}</p>
+      <p className="text-xs opacity-80 mt-1">
+        {data.expanded ? '▾' : '▸'} {data.blockCount} {data.blockCount === 1 ? 'item' : 'itens'}
+      </p>
     </div>
   )
 }
 
 const nodeTypes = { block: BlockNode, theme: ThemeNode }
 
-// Layout circular simples para posicionar os nós
 function applyLayout(nodes: any[], edges: any[]) {
   const themeNodes = nodes.filter(n => n.type === 'theme')
-  const blockNodes = nodes.filter(n => n.type === 'block')
-
+  const blockNodes  = nodes.filter(n => n.type === 'block')
   const W = 900
   const themeRadius = 350
 
-  // Temas em círculo
   const positionedThemes = themeNodes.map((n, i) => {
     const angle = (2 * Math.PI * i) / themeNodes.length - Math.PI / 2
     return {
       ...n,
       position: {
         x: W / 2 + themeRadius * Math.cos(angle),
-        y: 400 + themeRadius * Math.sin(angle),
+        y: 400   + themeRadius * Math.sin(angle),
       },
     }
   })
 
-  // Blocos ao redor dos temas
   const themeMap = new Map(positionedThemes.map(t => [t.id, t.position]))
   const blockThemeEdges = edges.filter(e => e.type === 'theme')
-  const blockPositions = new Map<string, { x: number; y: number }>()
 
   const blockCountPerTheme = new Map<string, number>()
-  for (const e of blockThemeEdges) {
-    const key = e.target
-    blockCountPerTheme.set(key, (blockCountPerTheme.get(key) ?? 0) + 1)
-  }
+  for (const e of blockThemeEdges)
+    blockCountPerTheme.set(e.target, (blockCountPerTheme.get(e.target) ?? 0) + 1)
 
   const blockIdxPerTheme = new Map<string, number>()
-
   const positionedBlocks = blockNodes.map(n => {
     const themeEdge = blockThemeEdges.find(e => e.source === n.id)
     if (themeEdge) {
       const themePos = themeMap.get(themeEdge.target) ?? { x: W / 2, y: 400 }
       const count = blockCountPerTheme.get(themeEdge.target) ?? 1
-      const idx = blockIdxPerTheme.get(themeEdge.target) ?? 0
+      const idx   = blockIdxPerTheme.get(themeEdge.target) ?? 0
       blockIdxPerTheme.set(themeEdge.target, idx + 1)
       const angle = (2 * Math.PI * idx) / count
-      const r = 140
-      const pos = { x: themePos.x + r * Math.cos(angle), y: themePos.y + r * Math.sin(angle) }
-      blockPositions.set(n.id, pos)
-      return { ...n, position: pos }
+      const r = 150
+      return { ...n, position: { x: themePos.x + r * Math.cos(angle), y: themePos.y + r * Math.sin(angle) } }
     }
-    // Bloco sem tema: posição aleatória no centro
     return { ...n, position: { x: W / 2 + (Math.random() - 0.5) * 200, y: 400 + (Math.random() - 0.5) * 200 } }
   })
 
@@ -106,38 +89,91 @@ function applyLayout(nodes: any[], edges: any[]) {
 export function KnowledgeGraph() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
-  const [loading, setLoading] = useState(true)
-  const [showThemeEdges, setShowThemeEdges] = useState(true)
+  const [loading, setLoading]             = useState(true)
+  const [expandedThemes, setExpandedThemes] = useState<Set<string>>(new Set())
+  const allNodesRef = useRef<Node[]>([])
+  const allEdgesRef = useRef<Edge[]>([])
   const router = useRouter()
+
+  function applyVisibility(expanded: Set<string>) {
+    const allNodes = allNodesRef.current
+    const allEdges = allEdgesRef.current
+
+    // Blocos visíveis = pertencentes a pelo menos um tema expandido
+    const visibleBlocks = new Set<string>()
+    for (const e of allEdges)
+      if (e.type === 'theme' && expanded.has(e.target as string))
+        visibleBlocks.add(e.source as string)
+
+    setNodes(allNodes.map(n => ({
+      ...n,
+      hidden: n.type === 'block' ? !visibleBlocks.has(n.id) : false,
+      data: n.type === 'theme' ? { ...n.data, expanded: expanded.has(n.id) } : n.data,
+    })))
+
+    setEdges(allEdges.map(e => {
+      if (e.type === 'theme')
+        return { ...e, hidden: !expanded.has(e.target as string) }
+      if (e.type === 'connection')
+        return { ...e, hidden: !visibleBlocks.has(e.source as string) || !visibleBlocks.has(e.target as string) }
+      return e
+    }))
+  }
 
   useEffect(() => {
     fetch('/api/graph')
       .then(r => r.json())
       .then(data => {
+        // Conta blocos por tema
+        const countMap = new Map<string, number>()
+        for (const e of data.edges)
+          if (e.type === 'theme')
+            countMap.set(e.target, (countMap.get(e.target) ?? 0) + 1)
+
         const positioned = applyLayout(data.nodes, data.edges)
-        setNodes(positioned)
-        setEdges(data.edges.map((e: any) => ({
+
+        const rawNodes: Node[] = positioned.map(n => ({
+          ...n,
+          data: n.type === 'theme'
+            ? { ...n.data, blockCount: countMap.get(n.id) ?? 0, expanded: false }
+            : n.data,
+        }))
+
+        const rawEdges: Edge[] = data.edges.map((e: any) => ({
           ...e,
-          animated:    e.type === 'connection',
-          style:       e.type === 'theme'
-            ? { stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }
+          animated: e.type === 'connection',
+          style: e.type === 'theme'
+            ? { stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }
             : { stroke: '#6366f1', strokeWidth: 2 },
-          markerEnd:   e.type === 'connection' ? { type: MarkerType.ArrowClosed, color: '#6366f1' } : undefined,
-          hidden:      e.type === 'theme' ? false : false,
-        })))
+          markerEnd: e.type === 'connection'
+            ? { type: MarkerType.ArrowClosed, color: '#6366f1' }
+            : undefined,
+        }))
+
+        allNodesRef.current = rawNodes
+        allEdgesRef.current = rawEdges
+        applyVisibility(new Set())
         setLoading(false)
       })
   }, [])
 
-  const onNodeClick = useCallback((_: any, node: Node) => {
-    if (node.type === 'block') router.push(`/block/${node.id}`)
-    if (node.type === 'theme') router.push(`/explore?theme=${node.id.replace('theme_', '')}`)
-  }, [router])
+  // Atualiza visibilidade sempre que expandedThemes muda
+  useEffect(() => {
+    if (allNodesRef.current.length === 0) return
+    applyVisibility(expandedThemes)
+  }, [expandedThemes])
 
-  const toggleThemeEdges = () => {
-    setShowThemeEdges(v => !v)
-    setEdges(prev => prev.map(e => e.type === 'theme' ? { ...e, hidden: showThemeEdges } : e))
-  }
+  const onNodeClick = useCallback((_: any, node: Node) => {
+    if (node.type === 'block') {
+      router.push(`/block/${node.id}`)
+    } else if (node.type === 'theme') {
+      setExpandedThemes(prev => {
+        const next = new Set(prev)
+        next.has(node.id) ? next.delete(node.id) : next.add(node.id)
+        return next
+      })
+    }
+  }, [router])
 
   if (loading) {
     return (
@@ -170,19 +206,16 @@ export function KnowledgeGraph() {
           <GitBranch className="h-4 w-4 text-indigo-500" />
           Grafo de Conhecimento
         </div>
-        <p className="text-xs text-slate-400">Clique em qualquer nó para abrir</p>
-        <button
-          onClick={toggleThemeEdges}
-          className="text-xs text-indigo-600 hover:underline"
-        >
-          {showThemeEdges ? 'Ocultar' : 'Mostrar'} arestas de tema
-        </button>
-        <div className="space-y-1">
+        <div className="space-y-1 text-xs text-slate-400">
+          <p>▸ Clique no tema para expandir</p>
+          <p>Clique no bloco para abrir</p>
+        </div>
+        <div className="space-y-1 mt-1 pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <div className="w-3 h-3 rounded-full bg-indigo-500" /> Nós de tema
+            <div className="w-3 h-3 rounded-full bg-indigo-500" /> Tema
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <div className="w-3 h-3 rounded-full bg-slate-300" /> Blocos de conhecimento
+            <div className="w-3 h-3 rounded-full bg-white border-2 border-slate-300" /> Bloco
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <div className="w-6 h-0.5 bg-indigo-500" /> Conexão explícita

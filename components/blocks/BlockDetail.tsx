@@ -18,6 +18,7 @@ import {
   cn, formatRelativeDate, getStatusColor, getStatusLabel,
   getSourceIcon, nextReviewDate
 } from '@/lib/utils'
+import { ClaudeKeyModal } from './ClaudeKeyModal'
 
 interface Block {
   id: string
@@ -63,6 +64,7 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
   const [tags, setTags] = useState<string[]>(block.blockTags.map(bt => bt.tag.name))
   const [isPending, startTransition] = useTransition()
   const [isAiPending, startAiTransition] = useTransition()
+  const [showKeyModal, setShowKeyModal] = useState(false)
   const router = useRouter()
 
   async function save() {
@@ -111,7 +113,7 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
         body: JSON.stringify({ blockId: block.id }),
       })
       if (res.status === 402) {
-        alert('Configure sua chave da API Claude em Configurações → Inteligência Artificial.')
+        setShowKeyModal(true)
         return
       }
       if (res.ok) {
@@ -306,6 +308,17 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
           </div>
         )}
       </div>
+
+      {/* Modal de chave Claude */}
+      {showKeyModal && (
+        <ClaudeKeyModal
+          onClose={() => setShowKeyModal(false)}
+          onSaved={() => {
+            setShowKeyModal(false)
+            generateSummary()
+          }}
+        />
+      )}
 
       {/* Conexões */}
       {(block.sourceConnections.length > 0 || block.targetConnections.length > 0) && (
