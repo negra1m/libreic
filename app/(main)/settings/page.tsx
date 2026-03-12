@@ -3,10 +3,11 @@ import { db } from '@/lib/db'
 import { users, blocks } from '@/lib/db/schema'
 import { eq, count, sum } from 'drizzle-orm'
 import { formatBytes } from '@/lib/utils'
-import { Database, LogOut, Shield, User } from 'lucide-react'
+import { Database, LogOut, Shield, User, Sparkles } from 'lucide-react'
 import { AvatarForm } from './AvatarForm'
 import { ProfileForm } from './ProfileForm'
 import { PasswordForm } from './PasswordForm'
+import { ClaudeKeyForm } from './ClaudeKeyForm'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -62,6 +63,17 @@ export default async function SettingsPage() {
             />
           </div>
           <p className="text-xs text-slate-400">{stats?.total ?? 0} blocos salvos</p>
+        </div>
+      </section>
+
+      {/* IA */}
+      <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="flex items-center gap-3 p-4 border-b border-slate-100">
+          <Sparkles className="h-4 w-4 text-indigo-400" />
+          <span className="text-sm font-semibold text-slate-700">Inteligência Artificial</span>
+        </div>
+        <div className="p-4">
+          <ClaudeKeyForm hasKey={!!user?.claudeApiKey} />
         </div>
       </section>
 

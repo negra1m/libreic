@@ -25,6 +25,7 @@ export const users = pgTable('users', {
   emailVerified:     timestamp('email_verified', { mode: 'date' }), // requerido pelo NextAuth
   password:          text('password'), // null se OAuth
   username:          text('username').unique(),
+  claudeApiKey:      text('claude_api_key'), // chave pessoal do usuário (BYOK)
   plan:              planEnum('plan').notNull().default('free'),
   storageLimitBytes: bigint('storage_limit_bytes', { mode: 'number' }).notNull().default(524288000),
   createdAt:         timestamp('created_at').notNull().defaultNow(),

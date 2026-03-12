@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { blocks } from '@/lib/db/schema'
+import { blocks, users } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const [userData] = await db.select({ claudeApiKey: users.claudeApiKey }).from(users)
+    .where(eq(users.id, session.user.id)).limit(1)
+  const apiKey = userData?.claudeApiKey ?? process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return NextResponse.json({ error: 'no_key' }, { status: 402 })
+
+  const client = new Anthropic({ apiKey })
 
   const { blockId } = await req.json()
 

@@ -26,7 +26,7 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, username } = body as { name?: string; username?: string }
+  const { name, username, claudeApiKey } = body as { name?: string; username?: string; claudeApiKey?: string | null }
 
   const updates: Partial<typeof users.$inferInsert> = {}
 
@@ -47,6 +47,10 @@ export async function PATCH(req: Request) {
       if (existing) return NextResponse.json({ error: 'Username já está em uso' }, { status: 409 })
     }
     updates.username = u || null
+  }
+
+  if (claudeApiKey !== undefined) {
+    updates.claudeApiKey = claudeApiKey ?? null
   }
 
   if (Object.keys(updates).length === 0)

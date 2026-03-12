@@ -12,7 +12,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   seen:       ['summarized', 'archived', 'pending'],
   summarized: ['applied', 'seen', 'archived'],
   applied:    ['archived', 'seen'],
-  archived:   ['saved'],
+  archived:   ['saved', 'applied'],
 }
 
 const schema = z.object({

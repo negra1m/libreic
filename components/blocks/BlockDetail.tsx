@@ -50,11 +50,12 @@ const RELATION_LABELS: Record<string, string> = {
   generaliza:  'Generaliza',
 }
 
-const STATUS_FLOW = ['saved', 'pending', 'seen', 'summarized', 'applied', 'archived']
+const STATUS_FLOW = ['saved', 'pending', 'seen', 'summarized', 'applied']
 
 export function BlockDetail({ block: initial, allThemes }: { block: Block; allThemes: any[] }) {
   const [block, setBlock] = useState(initial)
   const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState(block.title)
   const [note, setNote] = useState(block.personalNote ?? '')
   const [summary, setSummary] = useState(block.summary ?? '')
   const [mainInsight, setMainInsight] = useState(block.mainInsight ?? '')
@@ -70,6 +71,7 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          title,
           personalNote: note,
           summary,
           mainInsight,
@@ -108,6 +110,10 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blockId: block.id }),
       })
+      if (res.status === 402) {
+        alert('Configure sua chave da API Claude em Configurações → Inteligência Artificial.')
+        return
+      }
       if (res.ok) {
         const data = await res.json()
         setSummary(data.summary ?? '')
@@ -124,9 +130,10 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
     router.push('/library')
   }
 
+  const isArchived = block.status === 'archived'
   const currentIdx = STATUS_FLOW.indexOf(block.status)
-  const nextStatus = STATUS_FLOW[currentIdx + 1]
-  const prevStatus = STATUS_FLOW[currentIdx - 1]
+  const nextStatus = !isArchived ? STATUS_FLOW[currentIdx + 1] : undefined
+  const prevStatus = isArchived ? 'applied' : STATUS_FLOW[currentIdx - 1]
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -138,7 +145,16 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-lg">{getSourceIcon(block.sourceType)}</span>
-            <h1 className="font-bold text-slate-900 text-lg leading-tight">{block.title}</h1>
+            {editing ? (
+              <input
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                className="font-bold text-slate-900 text-lg leading-tight bg-white border border-indigo-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 min-w-0 flex-1"
+                autoFocus
+              />
+            ) : (
+              <h1 className="font-bold text-slate-900 text-lg leading-tight">{title}</h1>
+            )}
             {block.importance >= 4 && <Star className="h-4 w-4 text-amber-400 fill-amber-400 shrink-0" />}
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -182,6 +198,11 @@ export function BlockDetail({ block: initial, allThemes }: { block: Block; allTh
             {nextStatus && (
               <Button size="sm" onClick={() => updateStatus(nextStatus)} disabled={isPending}>
                 {getStatusLabel(nextStatus)} →
+              </Button>
+            )}
+            {!isArchived && (
+              <Button variant="outline" size="sm" onClick={() => updateStatus('archived')} disabled={isPending} className="text-slate-500 hover:text-slate-700">
+                Arquivar
               </Button>
             )}
           </div>
