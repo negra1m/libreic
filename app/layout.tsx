@@ -26,9 +26,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
+        {/* Set theme before paint to avoid flash */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}})()` }} />
       </head>
       <body className={`${inter.className} antialiased`}>
         <SessionProvider>

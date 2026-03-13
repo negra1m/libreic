@@ -3,11 +3,12 @@ import { db } from '@/lib/db'
 import { users, blocks } from '@/lib/db/schema'
 import { eq, count, sum } from 'drizzle-orm'
 import { formatBytes } from '@/lib/utils'
-import { Database, LogOut, Shield, User, Sparkles } from 'lucide-react'
+import { Database, LogOut, Shield, User, Sparkles, Palette } from 'lucide-react'
 import { AvatarForm } from './AvatarForm'
 import { ProfileForm } from './ProfileForm'
 import { PasswordForm } from './PasswordForm'
 import { ClaudeKeyForm } from './ClaudeKeyForm'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -85,6 +86,17 @@ export default async function SettingsPage() {
         </div>
         <div className="p-4">
           <PasswordForm hasPassword={!!user?.password} />
+        </div>
+      </section>
+
+      {/* Aparência */}
+      <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="flex items-center gap-3 p-4 border-b border-slate-100">
+          <Palette className="h-4 w-4 text-slate-400" />
+          <span className="text-sm font-semibold text-slate-700">Aparência</span>
+        </div>
+        <div className="p-4">
+          <ThemeToggle />
         </div>
       </section>
 

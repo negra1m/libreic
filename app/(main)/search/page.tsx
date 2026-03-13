@@ -9,7 +9,9 @@ export default function SearchPage() {
         <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
       </div>
     }>
-      <SearchClient />
+      <div className="h-full flex flex-col">
+        <SearchClient />
+      </div>
     </Suspense>
   )
 }

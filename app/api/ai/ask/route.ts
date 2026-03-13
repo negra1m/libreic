@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { blocks, users, blockTags, tags as tagsTable, blockThemes, themes } from '@/lib/db/schema'
-import { eq, and, or, ilike, inArray } from 'drizzle-orm'
+import { eq, and, or, ilike, inArray, sql } from 'drizzle-orm'
 import Anthropic from '@anthropic-ai/sdk'
 
 export async function POST(req: NextRequest) {
@@ -22,20 +22,26 @@ export async function POST(req: NextRequest) {
 
   const userId = session.user.id
 
-  // 1. Tenta full-text search (PostgreSQL tsvector)
-  let relevant = await db.execute(`
-    SELECT b.id, b.title, b.body_text, b.personal_note, b.summary, b.main_insight, b.source_url,
-      ts_rank(
-        to_tsvector('portuguese', coalesce(b.title,'') || ' ' || coalesce(b.body_text,'') || ' ' || coalesce(b.personal_note,'') || ' ' || coalesce(b.summary,'')),
-        plainto_tsquery('portuguese', ${question})
-      ) AS rank
-    FROM blocks b
-    WHERE b.user_id = ${userId}
-      AND to_tsvector('portuguese', coalesce(b.title,'') || ' ' || coalesce(b.body_text,'') || ' ' || coalesce(b.personal_note,'') || ' ' || coalesce(b.summary,''))
-          @@ plainto_tsquery('portuguese', ${question})
-    ORDER BY rank DESC
-    LIMIT 8
-  `) as any[]
+  // 1. Tenta full-text search (PostgreSQL tsvector) — usa sql tag para parametrizar
+  let relevant: any[]
+  try {
+    const rows = await db.execute(sql`
+      SELECT b.id, b.title, b.body_text, b.personal_note, b.summary, b.main_insight, b.source_url,
+        ts_rank(
+          to_tsvector('portuguese', coalesce(b.title,'') || ' ' || coalesce(b.body_text,'') || ' ' || coalesce(b.personal_note,'') || ' ' || coalesce(b.summary,'')),
+          plainto_tsquery('portuguese', ${question})
+        ) AS rank
+      FROM blocks b
+      WHERE b.user_id = ${userId}::uuid
+        AND to_tsvector('portuguese', coalesce(b.title,'') || ' ' || coalesce(b.body_text,'') || ' ' || coalesce(b.personal_note,'') || ' ' || coalesce(b.summary,''))
+            @@ plainto_tsquery('portuguese', ${question})
+      ORDER BY rank DESC
+      LIMIT 8
+    `)
+    relevant = Array.isArray(rows) ? rows : (rows as any).rows ?? []
+  } catch {
+    relevant = []
+  }
 
   // 2. Se FTS não retornou nada, fallback para ILIKE nos campos + tags + temas
   if (relevant.length === 0) {
@@ -132,12 +138,13 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const message = await client.messages.create({
-    model:      'claude-opus-4-6',
-    max_tokens: 1000,
-    messages: [{
-      role: 'user',
-      content: `Você é um assistente que responde perguntas com base na biblioteca pessoal de conhecimento do usuário.
+  try {
+    const message = await client.messages.create({
+      model:      'claude-opus-4-6',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: `Você é um assistente que responde perguntas com base na biblioteca pessoal de conhecimento do usuário.
 
 Use APENAS as informações abaixo para responder. Se a resposta não estiver nos conteúdos, diga claramente que não encontrou.
 
@@ -147,13 +154,29 @@ ${context}
 PERGUNTA: ${question}
 
 Responda de forma direta e útil, citando os números dos itens quando relevante (ex: "Conforme [1]...").`,
-    }],
-  })
+      }],
+    })
 
-  const answer = message.content[0].type === 'text' ? message.content[0].text : ''
+    const answer = message.content[0].type === 'text' ? message.content[0].text : ''
+    return NextResponse.json({
+      answer,
+      sources: (relevant as any[]).map(b => ({ title: b.title, url: b.source_url })),
+    })
+  } catch (err: any) {
+    // Parse Anthropic error to return a structured code
+    let code = 'unknown'
+    try {
+      const body = typeof err?.message === 'string' && err.message.startsWith('{')
+        ? JSON.parse(err.message)
+        : (err?.error ?? null)
+      const type = body?.error?.type ?? body?.type ?? ''
+      if (type === 'authentication_error' || err?.status === 401) code = 'invalid_key'
+      else if (err?.status === 400 && (err.message ?? '').toLowerCase().includes('credit')) code = 'credits_exhausted'
+      else if (err?.status === 429) code = 'rate_limit'
+      else if (err?.status === 529 || err?.status === 503) code = 'overloaded'
+      else code = 'api_error'
+    } catch { code = 'api_error' }
 
-  return NextResponse.json({
-    answer,
-    sources: (relevant as any[]).map(b => ({ title: b.title, url: b.source_url })),
-  })
+    return NextResponse.json({ error: code }, { status: 500 })
+  }
 }

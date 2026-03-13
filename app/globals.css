@@ -5,10 +5,157 @@
   --foreground: #0f172a;
 }
 
+/* ── Few Company dark palette ────────────────────────────── */
+html.dark {
+  --few-bg:        #0A0A1F;
+  --few-surface:   #0f0f2e;
+  --few-card:      #13132d;
+  --few-border:    rgba(139, 92, 246, 0.18);
+  --few-border-hi: rgba(139, 92, 246, 0.45);
+  --few-purple:    #C9AFFF;
+  --few-pink:      #FF2ECC;
+  --few-cyan:      #38B6FF;
+  --few-text:      #e2deff;
+  --few-muted:     #7c7a9e;
+  --background:    #0A0A1F;
+  --foreground:    #e2deff;
+  color-scheme: dark;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
+  transition: background 0.3s ease, color 0.3s ease;
 }
+
+/* ── Dark surface / card backgrounds ────────────────────── */
+html.dark .bg-white             { background-color: var(--few-card) !important; }
+html.dark .bg-slate-50          { background-color: var(--few-bg) !important; }
+html.dark .bg-slate-100         { background-color: #111130 !important; }
+html.dark .bg-slate-200         { background-color: #1a1a3e !important; }
+
+/* ── Dark borders ────────────────────────────────────────── */
+html.dark .border-slate-100     { border-color: var(--few-border) !important; }
+html.dark .border-slate-200     { border-color: var(--few-border) !important; }
+html.dark .border-slate-300     { border-color: var(--few-border-hi) !important; }
+
+/* ── Dark text ───────────────────────────────────────────── */
+html.dark .text-slate-900       { color: #e2deff !important; }
+html.dark .text-slate-800       { color: #cac6f5 !important; }
+html.dark .text-slate-700       { color: #a89fd4 !important; }
+html.dark .text-slate-600       { color: #8880b8 !important; }
+html.dark .text-slate-500       { color: #6e67a0 !important; }
+html.dark .text-slate-400       { color: var(--few-muted) !important; }
+html.dark .text-slate-300       { color: #524e78 !important; }
+
+/* ── Indigo → violet/purple (Few Company accent) ─────────── */
+html.dark .bg-indigo-50         { background-color: #0e0e2a !important; }
+html.dark .bg-indigo-100        { background-color: #14143a !important; }
+html.dark .border-indigo-100    { border-color: rgba(139,92,246,0.2) !important; }
+html.dark .border-indigo-200    { border-color: rgba(139,92,246,0.35) !important; }
+html.dark .border-indigo-300    { border-color: rgba(139,92,246,0.55) !important; }
+html.dark .text-indigo-700      { color: var(--few-purple) !important; }
+html.dark .text-indigo-600      { color: #a78bfa !important; }
+html.dark .text-indigo-500      { color: #8b5cf6 !important; }
+html.dark .hover\:border-indigo-200:hover { border-color: rgba(139,92,246,0.35) !important; }
+html.dark .hover\:border-indigo-300:hover { border-color: rgba(139,92,246,0.55) !important; }
+
+/* ── Amber ───────────────────────────────────────────────── */
+html.dark .bg-amber-50          { background-color: #1a1205 !important; }
+html.dark .border-amber-200     { border-color: rgba(217,119,6,0.3) !important; }
+html.dark .text-amber-700       { color: #fbbf24 !important; }
+html.dark .text-amber-800       { color: #f59e0b !important; }
+html.dark .text-amber-600       { color: #d97706 !important; }
+html.dark .text-amber-500       { color: #f59e0b !important; }
+html.dark .text-amber-400       { color: #fbbf24 !important; }
+
+/* ── Orange ──────────────────────────────────────────────── */
+html.dark .bg-orange-50         { background-color: #180e04 !important; }
+html.dark .border-orange-200    { border-color: rgba(234,88,12,0.25) !important; }
+html.dark .text-orange-600      { color: #fb923c !important; }
+html.dark .text-orange-400      { color: #f97316 !important; }
+
+/* ── Red ─────────────────────────────────────────────────── */
+html.dark .bg-red-50            { background-color: #160808 !important; }
+html.dark .border-red-200       { border-color: rgba(220,38,38,0.25) !important; }
+html.dark .text-red-700         { color: #f87171 !important; }
+html.dark .text-red-600         { color: #ef4444 !important; }
+html.dark .text-red-500         { color: #ef4444 !important; }
+
+/* ── Violet ──────────────────────────────────────────────── */
+html.dark .bg-violet-100        { background-color: #1a0d35 !important; }
+html.dark .text-violet-600      { color: var(--few-purple) !important; }
+
+/* ── Inputs ──────────────────────────────────────────────── */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #0d0d24;
+  border-color: var(--few-border);
+  color: #e2deff;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: var(--few-muted); }
+html.dark input:focus,
+html.dark textarea:focus {
+  background-color: #0d0d24;
+  border-color: rgba(139,92,246,0.6);
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
+}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+html.dark aside {
+  background-color: var(--few-surface) !important;
+  border-color: var(--few-border) !important;
+}
+html.dark nav { background-color: var(--few-surface) !important; }
+
+/* ── Header ──────────────────────────────────────────────── */
+html.dark header {
+  background-color: var(--few-surface) !important;
+  border-color: var(--few-border) !important;
+}
+
+/* ── Modals ──────────────────────────────────────────────── */
+html.dark [data-radix-dialog-overlay] { background: rgba(0,0,0,0.75) !important; }
+html.dark [role="dialog"] {
+  background-color: var(--few-card) !important;
+  border-color: var(--few-border-hi) !important;
+}
+
+/* ── Card hover glow (Few Company feel) ──────────────────── */
+html.dark .hover\:border-indigo-200:hover,
+html.dark .hover\:shadow-md:hover {
+  box-shadow: 0 0 20px rgba(139,92,246,0.12) !important;
+}
+html.dark .group:hover .group-hover\:-translate-y-0\.5 {
+  box-shadow: 0 4px 24px rgba(139,92,246,0.14);
+}
+
+/* ── Active nav items ────────────────────────────────────── */
+html.dark .bg-indigo-50.text-indigo-700 {
+  background-color: rgba(139,92,246,0.12) !important;
+  border-color: rgba(139,92,246,0.3) !important;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+html.dark ::-webkit-scrollbar-thumb  { background: #2a2a5a; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #3a3a7a; }
+
+/* ── Transitions on all interactive elements ─────────────── */
+html.dark a, html.dark button { transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; }
+
+/* ── Few Company glow on primary buttons ─────────────────── */
+html.dark .bg-indigo-600,
+html.dark .bg-indigo-500 {
+  box-shadow: 0 0 16px rgba(99,102,241,0.35);
+}
+html.dark .bg-indigo-600:hover,
+html.dark .bg-indigo-500:hover {
+  box-shadow: 0 0 24px rgba(201,175,255,0.4);
+  background-color: #7c3aed !important;
+}
+
 
 /* Scrollbar personalizada */
 ::-webkit-scrollbar { width: 5px; height: 5px; }

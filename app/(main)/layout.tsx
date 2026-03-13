@@ -56,7 +56,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         </header>
 
         {/* Conteúdo — padding-bottom para não ficar atrás do bottom nav no mobile */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 flex flex-col">
           {children}
         </main>
       </div>

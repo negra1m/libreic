@@ -21,7 +21,7 @@ interface SidebarProps {
 const navItems = [
   { href: '/',           label: 'Home',       icon: Home },
   { href: '/library',    label: 'Biblioteca', icon: Library },
-  { href: '/explore',    label: 'Explorar',   icon: Folder },
+  { href: '/explore',    label: 'Temas',      icon: Folder },
   { href: '/search',     label: 'Busca',      icon: Search },
   { href: '/feed',       label: 'Feed',       icon: Rss },
   { href: '/social',     label: 'Social',     icon: Users },
