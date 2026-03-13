@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { themes, themeMembers } from '@/lib/db/schema'
-import { eq, inArray } from 'drizzle-orm'
+import { eq, inArray, ilike, and, ne } from 'drizzle-orm'
 import { z } from 'zod'
 
 const createSchema = z.object({
@@ -14,10 +14,30 @@ const createSchema = z.object({
   visibility: z.enum(['public', 'private']).optional().default('public'),
 })
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = session.user.id
+
+  // ?q= → busca temas parecidos na plataforma inteira (para sugestão de deduplicação)
+  const q = req.nextUrl.searchParams.get('q')?.trim()
+  if (q) {
+    const similar = await db.query.themes.findMany({
+      where: and(
+        ilike(themes.name, `%${q}%`),
+        ne(themes.userId, userId),
+        eq(themes.visibility, 'public'),
+      ),
+      orderBy: (t, { asc }) => [asc(t.name)],
+      limit: 8,
+    })
+    // Retorna todos os temas do usuário — a filtragem por similaridade normalizada é feita no cliente
+    const ownSimilar = await db.query.themes.findMany({
+      where: eq(themes.userId, userId),
+      orderBy: (t, { asc }) => [asc(t.name)],
+    })
+    return NextResponse.json({ own: ownSimilar, platform: similar })
+  }
 
   const owned = await db.query.themes.findMany({
     where: eq(themes.userId, userId),

@@ -13,7 +13,7 @@ export default async function HomePage() {
   const [recent, dueReview, themeStats, totalThemes] = await Promise.all([
     // Recentes
     db.query.blocks.findMany({
-      where: and(eq(blocks.userId, userId), eq(blocks.status, 'saved')),
+      where: (b, { and: _and, eq: _eq, ne }) => _and(_eq(b.userId, userId), ne(b.status, 'archived')),
       orderBy: desc(blocks.createdAt),
       limit: 8,
       with: {

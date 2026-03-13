@@ -1,16 +1,66 @@
 'use client'
 
-import { useEffect, useCallback, useRef, useState } from 'react'
+import { useEffect, useCallback, useRef, useState, memo } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap,
-  ReactFlowProvider, useReactFlow,
-  type Node, type Edge,
-  MarkerType, Panel
+  useNodesState, useEdgesState,
+  getBezierPath,
+  type Node, type Edge, type EdgeProps,
+  Panel
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useRouter } from 'next/navigation'
 import { Loader2, GitBranch } from 'lucide-react'
 import { getSourceIcon, getStatusColor } from '@/lib/utils'
+
+const CustomEdge = memo(function CustomEdge({
+  id, sourceX, sourceY, targetX, targetY, data, markerEnd,
+}: EdgeProps) {
+  const [edgePath] = getBezierPath({ sourceX, sourceY, targetX, targetY })
+  const rt = (data as any)?.relationType ?? ''
+  const label: string = (data as any)?.sharedTags?.join(', ') ?? ''
+
+  let stroke = '#b1b1b7'
+  let strokeWidth = 1.5
+  let strokeDasharray = ''
+
+  if (rt === 'theme') {
+    stroke = '#cbd5e1'; strokeWidth = 1; strokeDasharray = '4 4'
+  } else if (rt === 'theme-overlap') {
+    stroke = '#f59e0b'; strokeWidth = 2.5; strokeDasharray = '6 3'
+  } else if (rt === 'tag-connection') {
+    stroke = '#10b981'; strokeWidth = 2; strokeDasharray = '4 3'
+  } else if (rt === 'connection') {
+    stroke = '#6366f1'; strokeWidth = 2
+  }
+
+  return (
+    <>
+      <path
+        id={id}
+        d={edgePath}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        strokeDasharray={strokeDasharray || undefined}
+        opacity={1}
+        markerEnd={markerEnd as string | undefined}
+      />
+      {/* wider invisible path for click target */}
+      <path d={edgePath} fill="none" stroke="transparent" strokeWidth={20} />
+      {label && (rt === 'theme-overlap' || rt === 'tag-connection') && (
+        <text>
+          <textPath href={`#${id}`} startOffset="50%" textAnchor="middle"
+            style={{ fontSize: 9, fill: rt === 'theme-overlap' ? '#b45309' : '#065f46', fontWeight: 600 }}>
+            {label}
+          </textPath>
+        </text>
+      )}
+    </>
+  )
+})
+
+const edgeTypes = { default: CustomEdge }
 
 function BlockNode({ data }: { data: any }) {
   return (
@@ -45,9 +95,9 @@ function ThemeNode({ data }: { data: any }) {
 
 const nodeTypes = { block: BlockNode, theme: ThemeNode }
 
-function applyLayout(nodes: any[], edges: any[]) {
-  const themeNodes = nodes.filter(n => n.type === 'theme')
-  const blockNodes = nodes.filter(n => n.type === 'block')
+function applyLayout(rawNodes: any[], rawEdges: any[]) {
+  const themeNodes = rawNodes.filter(n => n.type === 'theme')
+  const blockNodes = rawNodes.filter(n => n.type === 'block')
   const W = 900
   const themeRadius = 350
 
@@ -63,7 +113,7 @@ function applyLayout(nodes: any[], edges: any[]) {
   })
 
   const themeMap = new Map(positionedThemes.map(t => [t.id, t.position]))
-  const blockThemeEdges = edges.filter(e => e.data?.relationType === 'theme')
+  const blockThemeEdges = rawEdges.filter(e => e.data?.relationType === 'theme')
 
   const blockCountPerTheme = new Map<string, number>()
   for (const e of blockThemeEdges)
@@ -87,12 +137,13 @@ function applyLayout(nodes: any[], edges: any[]) {
   return [...positionedThemes, ...positionedBlocks]
 }
 
-function relationType(e: { data?: any }): string {
-  return (e.data as any)?.relationType ?? ''
+function rt(e: any): string {
+  return e.data?.relationType ?? ''
 }
 
-function KnowledgeGraphInner() {
-  const { setNodes, setEdges, fitView } = useReactFlow()
+export function KnowledgeGraph() {
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [loading, setLoading] = useState(true)
   const allNodesRef = useRef<Node[]>([])
   const allEdgesRef = useRef<Edge[]>([])
@@ -105,7 +156,7 @@ function KnowledgeGraphInner() {
 
     const visibleBlocks = new Set<string>()
     for (const e of allEdges)
-      if (relationType(e) === 'theme' && expanded.has(e.target as string))
+      if (rt(e) === 'theme' && expanded.has(e.target as string))
         visibleBlocks.add(e.source as string)
 
     const nextNodes: Node[] = [
@@ -116,23 +167,25 @@ function KnowledgeGraphInner() {
     ]
 
     const nextEdges: Edge[] = [
-      ...allEdges.filter(e => relationType(e) === 'theme-overlap'),
-      ...allEdges.filter(e => relationType(e) === 'theme' && expanded.has(e.target as string)),
+      ...allEdges.filter(e => rt(e) === 'theme-overlap'),
+      ...allEdges.filter(e => rt(e) === 'theme' && expanded.has(e.target as string)),
       ...allEdges.filter(e =>
-        (relationType(e) === 'connection' || relationType(e) === 'tag-connection') &&
+        (rt(e) === 'connection' || rt(e) === 'tag-connection') &&
         visibleBlocks.has(e.source as string) &&
         visibleBlocks.has(e.target as string)
       ),
     ]
 
-    setNodes(nextNodes)
-    setEdges(nextEdges)
+    setNodes([...nextNodes])
+    setEdges([...nextEdges])
   }
 
   useEffect(() => {
     fetch('/api/graph')
       .then(r => r.json())
       .then(data => {
+        if (!data.nodes) return
+
         const countMap = new Map<string, number>()
         for (const e of data.edges)
           if (e.data?.relationType === 'theme')
@@ -147,37 +200,21 @@ function KnowledgeGraphInner() {
             : n.data,
         }))
 
-        const rawEdges: Edge[] = data.edges.map((e: any) => {
-          const rt: string = e.data?.relationType ?? ''
-          return {
-            ...e,
-            animated: rt === 'connection',
-            style: rt === 'theme'
-              ? { stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }
-              : rt === 'theme-overlap'
-              ? { stroke: '#f59e0b', strokeWidth: 2.5, strokeDasharray: '6 3' }
-              : rt === 'tag-connection'
-              ? { stroke: '#10b981', strokeWidth: 2, strokeDasharray: '4 3' }
-              : { stroke: '#6366f1', strokeWidth: 2 },
-            markerEnd: rt === 'connection'
-              ? { type: MarkerType.ArrowClosed, color: '#6366f1' }
-              : undefined,
-            labelStyle: (rt === 'theme-overlap' || rt === 'tag-connection')
-              ? { fontSize: 9, fill: rt === 'theme-overlap' ? '#b45309' : '#065f46', fontWeight: 600 }
-              : undefined,
-            labelBgStyle: (rt === 'theme-overlap' || rt === 'tag-connection')
-              ? { fill: rt === 'theme-overlap' ? '#fef3c7' : '#d1fae5', fillOpacity: 0.9 }
-              : undefined,
-          }
-        })
+        const rawEdges: Edge[] = data.edges.map((e: any) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          data: e.data,
+          // type omitted → uses 'default' → our CustomEdge
+        }))
 
         allNodesRef.current = rawNodes
         allEdgesRef.current = rawEdges
 
         applyVisibility(new Set())
         setLoading(false)
-        setTimeout(() => fitView({ padding: 0.15 }), 50)
       })
+      .catch(() => setLoading(false))
   }, [])
 
   const onNodeClick = useCallback((_: any, node: Node) => {
@@ -202,7 +239,12 @@ function KnowledgeGraphInner() {
 
   return (
     <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
       nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
       onNodeClick={onNodeClick}
       fitView
       className="bg-slate-50"
@@ -241,15 +283,5 @@ function KnowledgeGraphInner() {
         </div>
       </Panel>
     </ReactFlow>
-  )
-}
-
-export function KnowledgeGraph() {
-  return (
-    <div className="w-full h-full">
-      <ReactFlowProvider>
-        <KnowledgeGraphInner />
-      </ReactFlowProvider>
-    </div>
   )
 }
