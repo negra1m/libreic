@@ -70,7 +70,7 @@ export default async function SocialPage() {
   `) as any[]
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="space-y-8">
       <div>
         <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
           <Users className="h-5 w-5 text-indigo-500" />

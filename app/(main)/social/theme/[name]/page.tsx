@@ -38,7 +38,7 @@ export default async function ThemePeoplePage({ params }: Props) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/social" className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
           <ArrowLeft className="h-4 w-4 text-slate-500" />

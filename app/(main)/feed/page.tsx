@@ -50,7 +50,7 @@ export default async function FeedPage() {
   const isEmpty = feedBlocks.length === 0
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">

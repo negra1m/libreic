@@ -51,7 +51,7 @@ export default async function HomePage() {
   ])
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="space-y-8">
       {/* Boas-vindas */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Olá, {session?.user?.name?.split(' ')[0]} 👋</h1>

@@ -99,7 +99,7 @@ export default async function ExplorePage({
   const children = (parentId: string) => visibleThemes.filter(t => t.parentId === parentId)
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
           <Layers className="h-5 w-5 text-indigo-500" />
